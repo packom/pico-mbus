@@ -22,3 +22,7 @@ generated
 *.elf
 *.elf.map
 *.uf2
+lib*.a
+
+# Other
+.vscode

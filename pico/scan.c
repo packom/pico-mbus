@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <pico/stdlib.h>
+#include <pico/binary_info.h>
 #include <mbus/mbus.h>
 
 #include "config.h"
@@ -22,6 +23,13 @@ int main()
     bool power_on = false;
     bool results[MBUS_MAX_PRIMARY_SLAVES+1];
     int positive_count, collision_count;
+
+    // Set binary information for this image (see https://github.com/raspberrypi/picotool#readme)
+    bi_decl(bi_program_description("Performs a scan of primary M-Bus addresses looking for attached slaves"));
+    bi_decl(bi_program_url("https://github.com/packom/pico-mbus"));
+    bi_decl(bi_program_version_string("Build date and time: " __DATE__ " " __TIME__));
+    bi_decl(bi_2pins_with_func(PICO_DEFAULT_UART_RX_PIN, PICO_DEFAULT_UART_TX_PIN, GPIO_FUNC_UART));
+    bi_decl(bi_2pins_with_func(PICO_DEFAULT_UART_TX_PIN, PICO_DEFAULT_UART_RX_PIN, GPIO_FUNC_UART));
 
     // Initialize stdio, including USB UART
     stdio_init_all();

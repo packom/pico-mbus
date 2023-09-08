@@ -27,20 +27,21 @@ add_definitions(-DRPI_PICO
   -DPICO_MBUS_RECV_DELAY=100
 )
 
-add_library(libmbus
+add_library(mbus
   libmbus/mbus/mbus-protocol.c
   libmbus/mbus/mbus-protocol-aux.c
-  libmbus/mbus-serial.c
+  libmbus/mbus/mbus-serial.c
   libmbus/bin/mbus-serial-scan.c
 )
 add_executable(mbus-scan
   pico/scan.c)
 
-include_directories(${CMAKE_SOURCE_DIR})
+target_include_directories(mbus PRIVATE libmbus)
+target_include_directories(mbus-scan PRIVATE pico libmbus)
 
-target_link_libraries(libmbus pico_stdlib hardware_uart)
+target_link_libraries(mbus pico_stdlib hardware_uart)
 target_link_libraries(mbus-scan
-  libmbus
+  mbus
   pico_bootsel_via_double_reset
 )
 
