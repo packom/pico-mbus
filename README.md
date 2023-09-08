@@ -2,6 +2,10 @@
 
 An M-Bus implementation for the Raspberry Pi Pico.
 
+## Getting the Pico SDK
+
+If you need install the Pico SDK, you can use [pico-build](https://github.com/piersfinlayson/pico-build).
+
 ## Checking out and building
 
 ```
