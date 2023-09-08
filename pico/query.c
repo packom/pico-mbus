@@ -7,7 +7,7 @@
 
 #include "config.h"
 
-extern int ping_address(mbus_handle *, mbus_frame *, int); // mbus-serial-scan.c
+extern int init_slaves(mbus_handle *); // mbus-serial-request-data.c
 
 static int debug = 0;
 
@@ -23,9 +23,13 @@ int main()
     bool power_on = false;
     bool results[MBUS_MAX_PRIMARY_SLAVES+1];
     int positive_count, collision_count;
+    char *addr_str;
+    char *xml_result = NULL;
+    mbus_frame reply;
+    mbus_frame_data reply_data;
 
     // Set binary information for this image (see https://github.com/raspberrypi/picotool#readme)
-    bi_decl(bi_program_description("Performs a scan of primary M-Bus addresses looking for attached slaves"));
+    bi_decl(bi_program_description("Query an M-Bus address for device information"));
     bi_decl(bi_program_url("https://github.com/packom/pico-mbus"));
     bi_decl(bi_program_version_string("Build date and time: " __DATE__ " " __TIME__));
     bi_decl(bi_2pins_with_func(PICO_DEFAULT_UART_RX_PIN, PICO_DEFAULT_UART_TX_PIN, GPIO_FUNC_UART));
@@ -41,6 +45,10 @@ int main()
     // Set up args used elsewhere
     debug = PICO_MBUS_DEBUG;
     baudrate = PICO_MBUS_BAUDRATE;
+    addr_str = PICO_MBUS_ADDRESS_STRING;
+    memset((void *)&reply, 0, sizeof(reply));
+    memset((void *)&reply_data, 0, sizeof(reply_data));
+    printf("M-Bus: Query data from device at address: %s\n", PICO_MBUS_ADDRESS_STRING);
     if (PICO_MBUS_UART == 0)
     {
         device = "UART0";
@@ -89,66 +97,94 @@ START_LABEL:
     }
     connected = true;
 
-    printf("M-Bus: Set search retries value to %d\n", PICO_MBUS_SEARCH_RETRY);
-    if (mbus_context_set_option(handle, MBUS_OPTION_MAX_SEARCH_RETRY, PICO_MBUS_SEARCH_RETRY) == -1)
+    printf("M-Bus: Initialize slaves\n");
+    if (init_slaves(handle) == 0)
     {
-        printf("M-Bus: Failed to set retry count to %d\n", PICO_MBUS_SEARCH_RETRY);
+        printf("M-Bus: Failed to initialize slaves\n");
         goto END_LABEL;
     }
 
-    printf("M-Bus: Scanning primary addresses:\n");
-    positive_count = 0;
-    collision_count = 0;
-    for (address = 0; address <= MBUS_MAX_PRIMARY_SLAVES; address++)
+    if (mbus_is_secondary_address(addr_str))
     {
-        results[address] = false;
-        mbus_frame reply;
+        // secondary addressing
 
-        ret = ping_address(handle, &reply, address);
+        int ret;
 
-        if (ret == MBUS_RECV_RESULT_TIMEOUT)
+        ret = mbus_select_secondary_address(handle, addr_str);
+
+        if (ret == MBUS_PROBE_COLLISION)
         {
-            continue;
+            printf("M-Bus: Error: The address mask [%s] matches more than one device\n", addr_str);
+            goto END_LABEL;
         }
-
-        if (ret == MBUS_RECV_RESULT_INVALID)
+        else if (ret == MBUS_PROBE_NOTHING)
         {
-            /* check for more data (collision) */
-            mbus_purge_frames(handle);
-            printf("M-Bus: Collision at address %d\n", address);
-            collision_count++;
-            continue;
+            printf("M-Bus: Error: The selected secondary address does not match any device [%s]\n", addr_str);
+            goto END_LABEL;
         }
-
-        if (mbus_frame_type(&reply) == MBUS_FRAME_TYPE_ACK)
+        else if (ret == MBUS_PROBE_ERROR)
         {
-            /* check for more data (collision) */
-            if (mbus_purge_frames(handle))
-            {
-                printf("M-Bus: Collision at address %d\n", address);
-                continue;
-            }
-
-            printf("Found an M-Bus device at address %d\n", address);
-            positive_count++;
-            results[address] = true;
+            printf("M-Bus: Error: Failed to select secondary address [%s]\n", addr_str);
+            goto END_LABEL;
         }
+        // else MBUS_PROBE_SINGLE
+        
+        address = MBUS_ADDRESS_NETWORK_LAYER;
+        printf("M-Bus: Secondary address: %s\n");
+    }
+    else
+    {
+        // primary addressing
+        address = atoi(addr_str);
+        printf("M-Bus: Primary address: %d\n", address);
     }
 
-    printf("M-Bus: Scan complete - results:\n");
-    printf("       Slaves found:    %d\n", positive_count);
-    printf("       Collisions:      %d\n", collision_count);
-    printf("       Addresses found: ");
-    for (address = 0; address <= MBUS_MAX_PRIMARY_SLAVES; address++)
+    if (mbus_send_request_frame(handle, address) == -1)
     {
-        if (results[address])
-        {
-            printf("%d ", address);
-        }
+        printf("M-Bus: Failed to send request frame\n");
+        goto END_LABEL;
     }
-    printf("\n");
+
+    if (mbus_recv_frame(handle, &reply) != MBUS_RECV_RESULT_OK)
+    {
+        printf("M-Bus: Failed to receive response frame\n");
+        goto END_LABEL;
+    }
+
+    if (debug)
+    {
+        mbus_frame_print(&reply);
+    }
+
+    if (mbus_frame_data_parse(&reply, &reply_data) == -1)
+    {
+        printf("M-Bus: Data parse error\n");
+        goto END_LABEL;
+    }
+
+    if ((xml_result = mbus_frame_data_xml(&reply_data)) == NULL)
+    {
+        printf("M-Bus: Failed to generate XML representation of data: %s\n", mbus_error_str());
+        goto END_LABEL;
+    }
+
+    printf("M-Bus: Query complete - results:\n");
+    printf("%s", xml_result);
 
 END_LABEL:
+
+    if (xml_result)
+    {
+        free(xml_result);
+        xml_result = NULL;
+    }
+    if (reply_data.data_var.record)
+    {
+        mbus_data_record_free(reply_data.data_var.record);
+    }
+    memset((void *)&reply, 0, sizeof(reply));
+    memset((void *)&reply_data, 0, sizeof(reply_data));
+
     if (connected)
     {
         printf("M-Bus: Disconnect\n");
@@ -164,12 +200,10 @@ END_LABEL:
         printf("M-Bus: Turn bus power off\n");
         gpio_put(PICO_MBUS_POWER_PIN, 0);
     }
-    printf("M-Bus: Pause for %dms before rescanning\n", PICO_MBUS_SCAN_RETRY_TIMER);
+    printf("M-Bus: Pause for %dms before requerying\n", PICO_MBUS_SCAN_RETRY_TIMER);
     sleep_ms(PICO_MBUS_SCAN_RETRY_TIMER);
 
     printf("------------\n");
 
     goto START_LABEL;
 }
-
-    

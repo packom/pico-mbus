@@ -24,7 +24,8 @@ add_definitions(-DRPI_PICO
   -DPICO_MBUS_POWER_ON_POST_DELAY=1000
   -DPICO_MBUS_SEARCH_RETRY=0
   -DPICO_MBUS_SCAN_RETRY_TIMER=10000
-  -DPICO_MBUS_RECV_DELAY=100
+  -DPICO_MBUS_RECV_DELAY=50
+  -DPICO_MBUS_ADDRESS_STRING="48"
 )
 
 add_library(mbus
@@ -32,15 +33,23 @@ add_library(mbus
   libmbus/mbus/mbus-protocol-aux.c
   libmbus/mbus/mbus-serial.c
   libmbus/bin/mbus-serial-scan.c
+  libmbus/bin/mbus-serial-request-data.c
 )
 add_executable(mbus-scan
   pico/scan.c)
+add_executable(mbus-query
+  pico/query.c)
 
 target_include_directories(mbus PRIVATE libmbus)
 target_include_directories(mbus-scan PRIVATE pico libmbus)
+target_include_directories(mbus-query PRIVATE pico libmbus)
 
 target_link_libraries(mbus pico_stdlib hardware_uart)
 target_link_libraries(mbus-scan
+  mbus
+  pico_bootsel_via_double_reset
+)
+target_link_libraries(mbus-query
   mbus
   pico_bootsel_via_double_reset
 )
@@ -48,3 +57,6 @@ target_link_libraries(mbus-scan
 pico_add_extra_outputs(mbus-scan)
 pico_enable_stdio_usb(mbus-scan 1)
 pico_enable_stdio_uart(mbus-scan 0)
+pico_add_extra_outputs(mbus-query)
+pico_enable_stdio_usb(mbus-query 1)
+pico_enable_stdio_uart(mbus-query 0)
