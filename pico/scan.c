@@ -162,7 +162,7 @@ END_LABEL:
     }
     if (power_on)
     {
-        printf("M-Bus: Turn bus power on\n");
+        printf("M-Bus: Turn bus power off\n");
         gpio_put(PICO_MBUS_POWER_PIN, 0);
     }
     printf("M-Bus: Pause for %dms before rescanning\n", PICO_MBUS_SCAN_RETRY_TIMER);
