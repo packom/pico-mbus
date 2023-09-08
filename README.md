@@ -66,3 +66,7 @@ The is no need to connect the RPi Hat ID_SD and ID_SC pins, and identification o
 mbus-scan
 * Scans the primary addresses 0-250 looking for M-Bus slaves
 * Once the scan is completed, prints the addresses of discovered slaves via USB serial
+
+mbus-query
+* Queries device at the configured address (PICO_MBUS_ADDRESS_STRING) and outputs retrieved data, formatted as XML, to USB serial
+
