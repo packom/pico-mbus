@@ -18,9 +18,10 @@
 // PICO_MBUS_POWER_ON_POST_DELAY - How long in ms to wait after turning on M-Bus power before doing anything else
 // PICO_MBUS_SEARCH_RETRY - Number of search transmission retries, from 0 to 9
 // PICO_MBUS_SCAN_RETRY_TIMER - Length of time in ms to wait between rescans of the bus
-// PICO_MBUS_RECV_DELAY - Number of ms to wait before attempting to receive data to allow some bytes to come in.  Note that the value mustn't be longer than the time take to receive 32 bytes of data (size of the UART RX bufer), which at 2400 baud is about 129ms.
-// PICO_MBUS_RECV_TIMEOUTS - Number of timeouts to allow during frame receive - total max wait time during a receive will be PICO_MBUS_RECV_TIMEOUTS * PICO_MBUS_RECV_DELAY.  Together this max wait time needs to be long enough to receive the longest desired M-Bus frame (e.g. a 64 byte frame takes about 267ms to transmit).
 // PICO_MBUS_ADDRESS_STRING - Address of device to communicate with, either primary or secondary address
+// PICO_MBUS_RX_BUF_LEN - The size of the RX buffer - should be substantially greater than expected M-Bus frame size.  The Pico has 264kbytes of RAM, so 1K should be reasonable.
+// PICO_MBUS_RX_WAIT_TIME_MS - Amount of time to be prepared to wait to read a specified number of bytes 
+// PICO MBUS_RX_BUF_FULL_OVERWRITE - Defines behaviour if our RX buffer is full and we receive a byte.  0 means don't overwrite the first stored byte (through away the one we're going to read instead), 1 means overwrite the first byte (i.e. new first byte will be the second byte).  Default is 0 (discard the next byte read).
 //
 
 // 

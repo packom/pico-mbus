@@ -70,3 +70,7 @@ mbus-scan
 mbus-query
 * Queries device at the configured address (PICO_MBUS_ADDRESS_STRING) and outputs retrieved data, formatted as XML, to USB serial
 
+test-serial
+* Used to check the rx ring buffer implementation
+* Sends a serial via serial and waits for some data to be sent back
+
