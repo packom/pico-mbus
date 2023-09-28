@@ -53,11 +53,22 @@ minicom -o -D /dev/ttyACM0
 
 ## M-Bus Master Support
 
-This has been tested with the [M-Bus Master Hat](https://www.packom.net/product/m-bus-master-hat/) for Raspberry Pis, attached using a Pico->Pi Hat converter board.  In particular:
+This library works with the packom.net M-Bus Master Hat Pico, which is designed specifically to support the Pico.  To use this the Pico Hat, no changes are required to this project.
+
+To use with the original [M-Bus Master Hat](https://www.packom.net/product/m-bus-master-hat/) for Raspberry Pis (not the Pico version), attach using a Pico->Pi Hat converter board.  In particular, using these PIN mappings:
 * Pico GP0 is connected to RPi Hat GPIO14
 * Pico GP1 is connected to RPi Hat GPIO15
 * Pico GP14 is mapped to RPi Hat GPIO26
 * 3V3, 5V and GND must also be connected to the Hat. 
+
+To use this M-Bus Master Hat mapping, change CMakeLists.txt line:
+```
+-DPICO_MBUS_POWER_PIN=2
+```
+to
+```
+-DPICO_MBUS_POWER_PIN=14
+```
 
 The is no need to connect the RPi Hat ID_SD and ID_SC pins, and identification of the Hat by the Pico is not supported.
 
